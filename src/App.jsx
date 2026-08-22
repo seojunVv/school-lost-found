@@ -57,16 +57,17 @@ const [error, setError] = useState('')
   }, [items, search, category, type])
 
   async function addItem(formData) {
-  console.log("Sending to Firebase:", formData)
+  try {
+    await addDoc(collection(db, "items"), {
+      ...formData,
+      createdAt: serverTimestamp(),
+    })
 
-  const docRef = await addDoc(collection(db, "items"), {
-    ...formData,
-    createdAt: serverTimestamp(),
-  })
-
-  console.log("Firebase document created:", docRef.id)
-
-  setShowModal(false)
+    setShowModal(false)
+  } catch (error) {
+    console.error("POST ERROR:", error)
+    alert("Failed to post report.")
+  }
 }
 
   return (
@@ -204,31 +205,22 @@ function ItemModal({ onClose, onSubmit }) {
   async function submit(e) {
   e.preventDefault()
 
-  console.log("SUBMIT CLICKED", form)
-
   if (!form.title.trim()) {
-    alert("Item name is missing.")
+    alert("Please enter an item name.")
     return
   }
 
   if (!form.location.trim()) {
-    alert("Location is missing.")
+    alert("Please enter a location.")
     return
   }
 
-  try {
-    await onSubmit({
-      ...form,
-      title: form.title.trim(),
-      location: form.location.trim(),
-      description: form.description.trim(),
-    })
-
-    console.log("ITEM POSTED")
-  } catch (error) {
-    console.error("POST ERROR:", error)
-    alert(error.message)
-  }
+  await onSubmit({
+    ...form,
+    title: form.title.trim(),
+    location: form.location.trim(),
+    description: form.description.trim(),
+  })
 }
 
   return (
@@ -249,7 +241,6 @@ function ItemModal({ onClose, onSubmit }) {
               value={form.title}
               onChange={(e) => update('title', e.target.value)}
               placeholder="e.g. Black calculator"
-              required
             />
           </label>
 
