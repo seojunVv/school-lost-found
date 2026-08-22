@@ -57,17 +57,16 @@ const [error, setError] = useState('')
   }, [items, search, category, type])
 
   async function addItem(formData) {
-  try {
-    await addDoc(collection(db, 'items'), {
-      ...formData,
-      createdAt: serverTimestamp(),
-    })
+  console.log("Sending to Firebase:", formData)
 
-    setShowModal(false)
-  } catch (err) {
-    console.error(err)
-    alert('Could not post the item.')
-  }
+  const docRef = await addDoc(collection(db, "items"), {
+    ...formData,
+    createdAt: serverTimestamp(),
+  })
+
+  console.log("Firebase document created:", docRef.id)
+
+  setShowModal(false)
 }
 
   return (
@@ -202,20 +201,35 @@ function ItemModal({ onClose, onSubmit }) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  function submit(e) {
-    e.preventDefault()
+  async function submit(e) {
+  e.preventDefault()
 
-    if (!form.title.trim() || !form.location.trim() || !form.description.trim()) {
-      return
-    }
+  console.log("SUBMIT CLICKED", form)
 
-    onSubmit({
+  if (!form.title.trim()) {
+    alert("Item name is missing.")
+    return
+  }
+
+  if (!form.location.trim()) {
+    alert("Location is missing.")
+    return
+  }
+
+  try {
+    await onSubmit({
       ...form,
       title: form.title.trim(),
       location: form.location.trim(),
       description: form.description.trim(),
     })
+
+    console.log("ITEM POSTED")
+  } catch (error) {
+    console.error("POST ERROR:", error)
+    alert(error.message)
   }
+}
 
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
