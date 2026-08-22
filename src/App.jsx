@@ -1,53 +1,44 @@
 import { useEffect, useMemo, useState } from 'react'
+import { addDoc, collection, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { db } from './firebase'
 import './App.css'
 
-const STORAGE_KEY = 'school-lost-found-items-v1'
-
-const starterItems = [
-  {
-    id: crypto.randomUUID(),
-    title: 'Black Water Bottle',
-    type: 'FOUND',
-    category: 'Bottle',
-    location: 'Gym',
-    date: '2026-08-21',
-    description: 'Black insulated bottle found near the bleachers.',
-  },
-  {
-    id: crypto.randomUUID(),
-    title: 'AirPods Case',
-    type: 'LOST',
-    category: 'Electronics',
-    location: 'Library',
-    date: '2026-08-20',
-    description: 'White AirPods case. Small scratch on the front.',
-  },
-  {
-    id: crypto.randomUUID(),
-    title: 'Blue Hoodie',
-    type: 'FOUND',
-    category: 'Clothing',
-    location: 'Cafeteria',
-    date: '2026-08-19',
-    description: 'Blue zip-up hoodie left on a chair.',
-  },
-]
 
 const categories = ['All', 'Electronics', 'Clothing', 'Bottle', 'School Supplies', 'Other']
 
 function App() {
-  const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? JSON.parse(saved) : starterItems
-  })
+  const [items, setItems] = useState([])
+const [loading, setLoading] = useState(true)
+const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [type, setType] = useState('ALL')
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-  }, [items])
+  const unsubscribe = onSnapshot(
+    collection(db, 'items'),
+
+    (snapshot) => {
+      const itemData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+
+      setItems(itemData)
+      setLoading(false)
+      setError('')
+    },
+
+    (err) => {
+      console.error(err)
+      setError('Could not load items.')
+      setLoading(false)
+    }
+  )
+
+  return () => unsubscribe()
+}, [])
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -65,16 +56,19 @@ function App() {
       .sort((a, b) => new Date(b.date) - new Date(a.date))
   }, [items, search, category, type])
 
-  function addItem(formData) {
-    setItems((current) => [
-      {
-        id: crypto.randomUUID(),
-        ...formData,
-      },
-      ...current,
-    ])
+  async function addItem(formData) {
+  try {
+    await addDoc(collection(db, 'items'), {
+      ...formData,
+      createdAt: serverTimestamp(),
+    })
+
     setShowModal(false)
+  } catch (err) {
+    console.error(err)
+    alert('Could not post the item.')
   }
+}
 
   return (
     <div className="app-shell">
@@ -143,6 +137,17 @@ function App() {
         </section>
 
         <section className="grid">
+            {loading && (
+  <div className="empty">
+    <h4>Loading items...</h4>
+  </div>
+)}
+
+{error && (
+  <div className="empty">
+    <h4>{error}</h4>
+  </div>
+)}
           {filteredItems.map((item) => (
             <article className="card" key={item.id}>
               <div className="card-top">
@@ -160,7 +165,7 @@ function App() {
             </article>
           ))}
 
-          {filteredItems.length === 0 && (
+          {!loading && !error && filteredItems.length === 0 && (
             <div className="empty">
               <h4>No matching items.</h4>
               <p>Try a different keyword or filter.</p>
