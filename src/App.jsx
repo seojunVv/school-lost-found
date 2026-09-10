@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   addDoc,
   collection,
+  getDocsFromServer,
   onSnapshot,
   serverTimestamp,
 } from "firebase/firestore";
@@ -34,31 +35,64 @@ function App() {
   // READ ITEMS FROM FIRESTORE
   // =========================
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "items"),
+useEffect(() => {
+  let unsubscribe;
 
-      (snapshot) => {
-        const firestoreItems = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+  async function loadItems() {
+    try {
+      console.log("Loading from Firestore server...");
 
-        setItems(firestoreItems);
-        setLoading(false);
-        setError("");
-      },
+      const snapshot = await getDocsFromServer(
+        collection(db, "items")
+      );
 
-      (err) => {
-        console.error("Firestore read error:", err);
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-        setError("Could not load items from Firebase.");
-        setLoading(false);
-      }
-    );
+      setItems(data);
+      setLoading(false);
+      setError("");
 
-    return () => unsubscribe();
-  }, []);
+      console.log("Initial load complete:", data);
+
+      // initial load 성공 후 real-time listener
+      unsubscribe = onSnapshot(
+        collection(db, "items"),
+
+        (snapshot) => {
+          const liveData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+
+          setItems(liveData);
+        },
+
+        (err) => {
+          console.error("Live listener error:", err);
+        }
+      );
+    } catch (err) {
+      console.error("Firestore load failed:", err);
+
+      setError(
+        "Could not connect to the Lost & Found database."
+      );
+
+      setLoading(false);
+    }
+  }
+
+  loadItems();
+
+  return () => {
+    if (unsubscribe) {
+      unsubscribe();
+    }
+  };
+}, []);
 
   // =========================
   // FILTER ITEMS
