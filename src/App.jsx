@@ -107,31 +107,34 @@ function App() {
   // ADD ITEM TO FIRESTORE
   // =========================
 
-  async function addItem(formData) {
-    try {
-      await addDoc(collection(db, "items"), {
-        ...formData,
+async function addItem(formData) {
+  try {
+    console.log("1. Starting Firebase write");
 
-        createdAt: serverTimestamp(),
-      });
+    const docRef = await addDoc(collection(db, "items"), {
+      ...formData,
+      createdAt: serverTimestamp(),
+    });
 
-      // CLOSE MODAL AFTER SUCCESS
-      setShowModal(false);
+    console.log("2. Firebase write complete:", docRef.id);
 
-      // SUCCESS MESSAGE
-      setSuccessMessage("Report posted successfully.");
+    setShowModal(false);
 
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 3000);
+    setSuccessMessage("Report posted successfully.");
 
-      return true;
-    } catch (err) {
-      console.error("Firestore write error:", err);
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 3000);
 
-      throw err;
-    }
+    return true;
+  } catch (err) {
+    console.error("FIREBASE WRITE ERROR:", err);
+
+    alert(`Firebase error: ${err.message}`);
+
+    throw err;
   }
+}
 
   return (
     <div className="app-shell">
