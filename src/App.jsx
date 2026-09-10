@@ -107,34 +107,31 @@ function App() {
   // ADD ITEM TO FIRESTORE
   // =========================
 
-async function addItem(formData) {
-  try {
-    console.log("1. Starting Firebase write");
+  async function addItem(formData) {
+    try {
+      await addDoc(collection(db, "items"), {
+        ...formData,
 
-    const docRef = await addDoc(collection(db, "items"), {
-      ...formData,
-      createdAt: serverTimestamp(),
-    });
+        createdAt: serverTimestamp(),
+      });
 
-    console.log("2. Firebase write complete:", docRef.id);
+      // CLOSE MODAL AFTER SUCCESS
+      setShowModal(false);
 
-    setShowModal(false);
+      // SUCCESS MESSAGE
+      setSuccessMessage("Report posted successfully.");
 
-    setSuccessMessage("Report posted successfully.");
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
 
-    setTimeout(() => {
-      setSuccessMessage("");
-    }, 3000);
+      return true;
+    } catch (err) {
+      console.error("Firestore write error:", err);
 
-    return true;
-  } catch (err) {
-    console.error("FIREBASE WRITE ERROR:", err);
-
-    alert(`Firebase error: ${err.message}`);
-
-    throw err;
+      throw err;
+    }
   }
-}
 
   return (
     <div className="app-shell">
@@ -418,12 +415,10 @@ function ItemModal({ onClose, onSubmit }) {
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={() => {
-        if (!submitting) onClose();
-      }}
-    >
+<div
+  className="modal-backdrop"
+  onMouseDown={onClose}
+>
       <div
         className="modal"
         onMouseDown={(e) => e.stopPropagation()}
@@ -440,14 +435,13 @@ function ItemModal({ onClose, onSubmit }) {
           </div>
 
           <button
-            type="button"
-            className="icon-btn"
-            onClick={onClose}
-            disabled={submitting}
-            aria-label="Close"
-          >
-            ×
-          </button>
+  type="button"
+  className="icon-btn"
+  onClick={onClose}
+  aria-label="Close"
+>
+  ×
+</button>
         </div>
 
         {/* FORM */}
@@ -567,13 +561,12 @@ function ItemModal({ onClose, onSubmit }) {
 
           <div className="modal-actions">
             <button
-              type="button"
-              className="secondary-btn"
-              onClick={onClose}
-              disabled={submitting}
-            >
-              Cancel
-            </button>
+  type="button"
+  className="secondary-btn"
+  onClick={onClose}
+>
+  Cancel
+</button>
 
             <button
               type="submit"
